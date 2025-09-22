@@ -47,3 +47,6 @@ app.use("/foods", foodRouter);
 app.use("/macros", macroRouter);
 
 app.use("/progress", macroProgressRouter);
+app.get('/',(req,res)=>{
+  res.json({"message":"listening"})
+})
