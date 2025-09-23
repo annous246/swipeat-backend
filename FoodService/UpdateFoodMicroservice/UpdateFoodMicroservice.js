@@ -112,9 +112,28 @@ router.post("/update_carbs", authenticate, async (req, res) => {
 
 router.post("/update_portion", authenticate, async (req, res) => {
   const { id, portion } = req.body;
-  if (portion != undefined && numberChecker([portion]) && id && portion > -1) {
+  if (portion != undefined && numberChecker([portion]) && id && portion > 0) {
+    const oldRes = await db.query("SELECT * FROM foods WHERE id=$1", [id]);
+    const oldPortion = oldRes.rows[0].portion;
+    const oldProtein = oldRes.rows[0].protein;
+    const oldCarbs = oldRes.rows[0].carbs;
+    const oldCalories = oldRes.rows[0].calories;
     const result = await db.query("UPDATE foods SET portion=$1 WHERE id=$2", [
       portion,
+      id,
+    ]);
+    await db.query("UPDATE foods SET carbs=$1 WHERE id=$2", [
+      (oldCarbs * parseFloat(portion / oldPortion)).toFixed(2),
+      id,
+    ]);
+
+    await db.query("UPDATE foods SET protein=$1 WHERE id=$2", [
+      (oldProtein * parseFloat(portion / oldPortion)).toFixed(2),
+      id,
+    ]);
+
+    await db.query("UPDATE foods SET calories=$1 WHERE id=$2", [
+      (oldCalories * parseFloat(portion / oldPortion)).toFixed(2),
       id,
     ]);
 
