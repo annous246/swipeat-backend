@@ -90,9 +90,7 @@ export async function runAi(url) {
     console.log(response.choices[0].finish_reason);
     if (response.choices[0].finish_reason == "tool_calls") {
       // return response.body.choices[0].message.tool_calls[0].function.arguments;
-      return JSON.parse(
-        response.choices[0].message.tool_calls[0].function.arguments
-      );
+      return response.choices[0].message.tool_calls[0].function.arguments;
     } else {
       throw new Error("Image Reading Error");
     }
