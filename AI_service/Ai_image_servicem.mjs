@@ -21,6 +21,7 @@ export async function runAi(url) {
       throw new Error("Image URL is not provided.");
     }
 
+    const client = ModelClient(endpoint, new AzureKeyCredential(token));
     let function_definition = [];
     function_definition.push({
       type: "function",
@@ -55,14 +56,51 @@ export async function runAi(url) {
                 "approximate calories content in kilo calories inside the whole picture portion (just the number)",
             },
           },
+          required: ["portion", "food_name", "protein", "carbs", "calories"],
         },
       },
     });
-    const client = new OpenAI({
+
+    // const response = await client.path("/chat/completions").post({
+    //   body: {
+    //     messages: [
+    //       {
+    //         role: "system",
+    //         content:
+    //           "You are a helpful nutrition assistant that can analyze food images",
+    //       },
+    //       {
+    //         role: "user",
+    //         content: [
+    //           {
+    //             type: "text",
+    //             text: "Please identify this food (in a max of 15 to 20 characters) and provide nutritional macros and total estimated portion in grams (g)",
+    //           },
+    //           {
+    //             type: "image_url",
+    //             image_url: {
+    //               url: url,
+    //             },
+    //           },
+    //         ],
+    //       },
+    //     ],
+    //     tools: function_definition,
+    //     tool_choice: {
+    //       type: "function",
+    //       function: { name: "extract_nutrition_facts" },
+    //     },
+    //     temperature: 0,
+    //     top_p: 1,
+    //     model: model,
+    //   },
+    // });
+    const openai = new OpenAI({
       baseURL: "https://openrouter.ai/api/v1",
-      apiKey: process.env.OPENAPI_KEY,
+      apiKey:
+        "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",
     });
-    const response = await client.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: "openai/gpt-4o-mini",
       messages: [
         {
@@ -84,7 +122,15 @@ export async function runAi(url) {
     console.log("response.choices[0].message");
     console.log(response.choices[0].message);
     console.log(response.choices[0].message.tool_calls[0].function.arguments);
-
+    // if (isUnexpected(response)) {
+    //   console.error("Unexpected response:", JSON.stringify(response, null, 2));
+    //   const error = response.body?.error || {
+    //     message: "Unknown error occurred",
+    //     status: response.status,
+    //   };
+    //   throw new Error(JSON.stringify(error));
+    // }
+    // if (response.body.choices[0].finish_reason == "stop") {
     console.log(response.choices[0].finish_reason);
     if (response.choices[0].finish_reason == "tool_calls") {
       // return response.body.choices[0].message.tool_calls[0].function.arguments;
