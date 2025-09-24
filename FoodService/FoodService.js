@@ -186,7 +186,7 @@ router.post(
       console.error("AI Error:", err);
       return res.json({ ok: 0, message: "error uploading image" });
     } finally {
-      fs.unlinkSync(req.file.path);
+      //fs.unlinkSync(req.file.path);
       console.log("image deleted");
     }
   }
