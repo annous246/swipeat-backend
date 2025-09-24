@@ -21,7 +21,6 @@ export async function runAi(url) {
       throw new Error("Image URL is not provided.");
     }
 
-    const client = ModelClient(endpoint, new AzureKeyCredential(token));
     let function_definition = [];
     function_definition.push({
       type: "function",
@@ -63,8 +62,7 @@ export async function runAi(url) {
 
     const openai = new OpenAI({
       baseURL: "https://openrouter.ai/api/v1",
-      apiKey:
-        "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",
+      apiKey: process.env.OPENAPI_KEY,
     });
     const response = await openai.chat.completions.create({
       model: "openai/gpt-4o-mini",
