@@ -6,6 +6,8 @@ const token = process.env["GITHUB_TOKEN"];
 const endpoint = "https://models.github.ai/inference";
 const model = "openai/gpt-4.1";
 
+import OpenAI from "openai";
+
 export async function runAi(url) {
   try {
     console.log("Starting AI request...");
@@ -57,53 +59,40 @@ export async function runAi(url) {
         },
       },
     });
-
-    const response = await client.path("/chat/completions").post({
-      body: {
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a helpful nutrition assistant that can analyze food images",
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Please identify this food (in a max of 15 to 20 characters) and provide nutritional macros and total estimated portion in grams (g)",
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: url,
-                },
-              },
-            ],
-          },
-        ],
-        tools: function_definition,
-        tool_choice: {
-          type: "function",
-          function: { name: "extract_nutrition_facts" },
+    nai = new OpenAI({
+      baseURL: "https://openrouter.ai/api/v1",
+      apiKey:
+        "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",
+    });
+    const response = await openai.chat.completions.create({
+      model: "openai/gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a helpful nutrition assistant that can analyze food images",
         },
-        temperature: 0,
-        top_p: 1,
-        model: model,
-      },
+        {
+          role: "user",
+          content: `Please identify this food (max 15-20 characters) and provide nutritional macros and total estimated portion in grams (g). Image URL: """${url}""" `,
+        },
+      ],
+      tools: function_definition,
+      tool_call: { name: "extract_nutrition_facts" },
+      temperature: 0,
+      top_p: 1,
     });
 
-    if (isUnexpected(response)) {
-      console.error("Unexpected response:", JSON.stringify(response, null, 2));
-      const error = response.body?.error || {
-        message: "Unknown error occurred",
-        status: response.status,
-      };
-      throw new Error(JSON.stringify(error));
-    }
+    console.log("response.choices[0].message");
+    console.log(response.choices[0].message);
+    console.log(response.choices[0].message.tool_calls[0].function.arguments);
 
-    if (response.body.choices[0].finish_reason == "stop") {
-      return response.body.choices[0].message.tool_calls[0].function.arguments;
+    console.log(response.choices[0].finish_reason);
+    if (response.choices[0].finish_reason == "tool_calls") {
+      // return response.body.choices[0].message.tool_calls[0].function.arguments;
+      return JSON.parse(
+        response.choices[0].message.tool_calls[0].function.arguments
+      );
     } else {
       throw new Error("Image Reading Error");
     }

@@ -165,7 +165,7 @@ router.get("/update", async (req, res) => {});
 
 router.post(
   "/upload",
-  authenticate,
+
   upload.single("image"),
   async (req, res) => {
     if (!req.file) return res.status(400).send("No image uploaded.");
