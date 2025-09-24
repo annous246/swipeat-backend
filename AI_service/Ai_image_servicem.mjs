@@ -61,8 +61,7 @@ export async function runAi(url) {
     });
     nai = new OpenAI({
       baseURL: "https://openrouter.ai/api/v1",
-      apiKey:
-        "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",
+      apiKey: process.env.OPENAPI_KEY,
     });
     const response = await openai.chat.completions.create({
       model: "openai/gpt-4o-mini",
