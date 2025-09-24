@@ -21,7 +21,6 @@ export async function runAi(url) {
       throw new Error("Image URL is not provided.");
     }
 
-    const client = ModelClient(endpoint, new AzureKeyCredential(token));
     let function_definition = [];
     function_definition.push({
       type: "function",
