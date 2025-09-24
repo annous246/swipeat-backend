@@ -61,40 +61,6 @@ export async function runAi(url) {
       },
     });
 
-    // const response = await client.path("/chat/completions").post({
-    //   body: {
-    //     messages: [
-    //       {
-    //         role: "system",
-    //         content:
-    //           "You are a helpful nutrition assistant that can analyze food images",
-    //       },
-    //       {
-    //         role: "user",
-    //         content: [
-    //           {
-    //             type: "text",
-    //             text: "Please identify this food (in a max of 15 to 20 characters) and provide nutritional macros and total estimated portion in grams (g)",
-    //           },
-    //           {
-    //             type: "image_url",
-    //             image_url: {
-    //               url: url,
-    //             },
-    //           },
-    //         ],
-    //       },
-    //     ],
-    //     tools: function_definition,
-    //     tool_choice: {
-    //       type: "function",
-    //       function: { name: "extract_nutrition_facts" },
-    //     },
-    //     temperature: 0,
-    //     top_p: 1,
-    //     model: model,
-    //   },
-    // });
     const openai = new OpenAI({
       baseURL: "https://openrouter.ai/api/v1",
       apiKey:
@@ -122,15 +88,7 @@ export async function runAi(url) {
     console.log("response.choices[0].message");
     console.log(response.choices[0].message);
     console.log(response.choices[0].message.tool_calls[0].function.arguments);
-    // if (isUnexpected(response)) {
-    //   console.error("Unexpected response:", JSON.stringify(response, null, 2));
-    //   const error = response.body?.error || {
-    //     message: "Unknown error occurred",
-    //     status: response.status,
-    //   };
-    //   throw new Error(JSON.stringify(error));
-    // }
-    // if (response.body.choices[0].finish_reason == "stop") {
+
     console.log(response.choices[0].finish_reason);
     if (response.choices[0].finish_reason == "tool_calls") {
       // return response.body.choices[0].message.tool_calls[0].function.arguments;
