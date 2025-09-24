@@ -1,3 +1,7 @@
+
+
+    const client = ModelClient(endpoint, new AzureKeyCredential(token));
+
 // const response = await client.path("/chat/completions").post({
 //   body: {
 //     messages: [
