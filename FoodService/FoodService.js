@@ -43,7 +43,7 @@ router.post("/create", authenticate, async (req, res) => {
       kcal < 0 ||
       protein < 0 ||
       carbs < 0 ||
-      portion < 0
+      parseInt(portion) <= 0
     ) {
       return res.json({
         status: 400,
