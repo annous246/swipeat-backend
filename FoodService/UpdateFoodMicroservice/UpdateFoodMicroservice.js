@@ -114,7 +114,7 @@ router.post("/update_portion", authenticate, async (req, res) => {
   const { id, portion } = req.body;
   if (portion != undefined && numberChecker([portion]) && id && portion > 0) {
     const oldRes = await db.query("SELECT * FROM foods WHERE id=$1", [id]);
-    const oldPortion = oldRes.rows[0].portion;
+    const oldPortion = oldRes.rows[0].portion ?? portion;
     const oldProtein = oldRes.rows[0].protein;
     const oldCarbs = oldRes.rows[0].carbs;
     const oldCalories = oldRes.rows[0].calories;
