@@ -58,6 +58,53 @@ router.post("/add", authenticate, async (req, res) => {
   }
 });
 
+// router.post("/instantAdd", authenticate, async (req, res) => {
+//   const { id, servings, name, kcal, protein, carbs, portion } = req.body;
+
+//   if (id && servings && name) {
+//     const foodObj = {
+//       kcal,
+//       protein,
+//       carbs,
+//       portion,
+
+//       name,
+//       id,
+//     };
+//     const next = await db.query(
+//       "INSERT INTO consumed_foods (id,protein,calories,carbs,portion,servings,name,userid) VALUES($8,$1,$2,$3,$4,$5,$6,$7);",
+//       [
+//         foodObj.protein,
+//         foodObj.calories,
+//         foodObj.carbs,
+//         foodObj.portion,
+//         servings,
+//         foodObj.name,
+//         req.user.id,
+//         foodObj.id,
+//       ]
+//     );
+//     if (!next.rowCount) {
+//       return res.json({
+//         status: 501,
+//         ok: 0,
+//         message: "Internal Error",
+//       });
+//     }
+//     return res.json({
+//       status: 201,
+//       ok: 1,
+//       message: "Consumed successfuly added",
+//     });
+//   } else {
+//     return res.json({
+//       status: 400,
+//       ok: 0,
+//       message: "Input Missing / Error",
+//     });
+//   }
+// });
+
 router.post("/reset", authenticate, async (req, res) => {
   try {
     const id = req.user.id;
