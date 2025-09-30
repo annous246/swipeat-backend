@@ -32,6 +32,12 @@ router.post("/reset", authenticate, async (req, res) => {
     const caloriesGoal = goal.rows[0]["calories_progress"];
 
     await db.query("begin");
+    //security deletion for multiple resets per day
+    await db.query(
+      "DELETE FROM past_macro_goals WHERE progress_date=$1 AND userid=$2 ",
+      [dateOnly, id]
+    );
+
     const pastProgress = await db.query(
       "INSERT INTO past_macro_goals (protein_goal,carbs_goal,calories_goal,progress_date,userid) VALUES($1,$2,$3,$4,$5) ",
       [proteinGoal, carbsGoal, caloriesGoal, dateOnly, id]
@@ -219,6 +225,7 @@ async function pullDaily(daily, id, element) {
         `SELECT AVG(${element}_goal),SUM(${element}_goal) FROM past_macro_goals WHERE userid=$1 GROUP BY progress_date HAVING progress_date=$2 `,
         [id, convertedDate]
       );
+
       console.log(result.rowCount);
       if (result.rowCount) daily[convertedDate] = result.rows[0];
       else daily[convertedDate] = { avg: 0, sum: 0 };

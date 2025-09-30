@@ -120,6 +120,12 @@ router.post("/reset", authenticate, async (req, res) => {
       for (const row of consumedfoodsResults.rows) {
         console.log("row");
         console.log(row);
+        //removal for security against multiple resets per day
+        await db.query(
+          "DELETE FROM past_consumed_foods WHERE consumed_date=$1 AND userid=$2",
+          [dateOnly, row.userid]
+        );
+
         await db.query(
           "INSERT INTO past_consumed_foods(name,protein,carbs,calories,portion,servings,userid,consumed_date) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
           [
