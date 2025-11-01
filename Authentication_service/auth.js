@@ -11,7 +11,7 @@ const util = require("util");
 const { google } = require("googleapis");
 const readline = require("readline");
 const rateLimit = require("express-rate-limit");
-
+const MailComposer = require("nodemailer/lib/mail-composer");
 const AuthLimiter = rateLimit({
   windowMs: 30000, //each 5 mins,
   max: 10,
@@ -38,34 +38,41 @@ oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
 
 async function sendVerificationEmail(email, code) {
   try {
-    const accessToken = await oAuth2Client.getAccessToken();
+    // get authorized Gmail API client
+    const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        type: "OAuth2",
-        user: "anasrabhi246@gmail.com",
-        clientId: CLIENT_ID,
-        clientSecret: CLIENT_SECRET,
-        refreshToken: REFRESH_TOKEN,
-        accessToken: accessToken.token,
+    // build raw email message
+    const mail = new MailComposer({
+      from: "anasrabhi246@gmail.com",
+      to: email,
+      subject: "Swipeat Verification Bot",
+      text: `Hello!\nYour verification code is: ${code}`,
+    });
+
+    const message = await mail.compile().build();
+
+    // encode to base64url for Gmail API
+    const encodedMessage = message
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    // send using Gmail API
+    console.log("seind ..........");
+    const res = await gmail.users.messages.send({
+      userId: "me",
+      requestBody: {
+        raw: encodedMessage,
       },
     });
 
-    const mailOptions = {
-      from: "anasrabhi246@gmail.com",
-      to: email,
-      subject: `Hello! This is Swipeat Verification Bot.\nVERIFICATION CODE = ${code}`,
-      text: "This mail was sent from inside index.js through /send-mail route.",
-    };
-    console.log("here trying to send ......");
-
-    const result = await transporter.sendMail(mailOptions);
-    console.log("Email sent:", result.response);
-  } catch (error) {
-    console.error("❌ Error:", error);
+    console.log("✅ Email sent successfully:", res.data.id);
+  } catch (err) {
+    console.error("❌ Gmail API error:", err);
   }
 }
+sendVerificationEmail("anasrabhi0@gmail.com", 5454);
 // console.log("Open this URL in your browser:", authUrl);
 
 // const rl = readline.createInterface({
