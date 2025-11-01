@@ -58,6 +58,7 @@ async function sendVerificationEmail(email, code) {
       subject: `Hello! This is Swipeat Verification Bot.\nVERIFICATION CODE = ${code}`,
       text: "This mail was sent from inside index.js through /send-mail route.",
     };
+    console.log("here trying to send ......");
 
     const result = await transporter.sendMail(mailOptions);
     console.log("Email sent:", result.response);
