@@ -441,7 +441,7 @@ router.post("/forgot", AuthLimiter, async (req, res) => {
       //already sent earlier
       return res.json({
         status: 200,
-        ok: 0,
+        ok: 2,
         message: "An email was sent recently for recovery , try again later",
       });
     } else {
