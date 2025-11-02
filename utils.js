@@ -25,4 +25,21 @@ function authenticate(req, res, next) {
     next();
   });
 }
-module.exports = { checker, authenticate, numberChecker };
+function formatLocalDate(date = new Date()) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return (
+    date.getFullYear() +
+    "-" +
+    pad(date.getMonth() + 1) +
+    "-" +
+    pad(date.getDate()) +
+    " " +
+    pad(date.getHours()) +
+    ":" +
+    pad(date.getMinutes()) +
+    ":" +
+    pad(date.getSeconds())
+  );
+}
+
+module.exports = { checker, authenticate, numberChecker, formatLocalDate };

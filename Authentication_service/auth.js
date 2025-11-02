@@ -4,7 +4,7 @@ const db = require("../database/db.js");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
-const { checker, authenticate } = require("../utils");
+const { checker, authenticate, formatLocalDate } = require("../utils");
 const { Resend } = require("resend");
 const util = require("util");
 
@@ -36,7 +36,7 @@ const oAuth2Client = new google.auth.OAuth2(
 );
 oAuth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
 
-async function sendVerificationEmail(email, code) {
+async function sendEmail(email, code, type) {
   try {
     // get authorized Gmail API client
     const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
@@ -45,8 +45,8 @@ async function sendVerificationEmail(email, code) {
     const mail = new MailComposer({
       from: "anasrabhi246@gmail.com",
       to: email,
-      subject: "Swipeat Verification Bot",
-      text: `Hello!\nYour verification code is: ${code}`,
+      subject: `Swipeat ${type} Bot`,
+      text: `Hello!\nYour ${type} code is: ${code}`,
     });
 
     const message = await mail.compile().build();
@@ -59,7 +59,7 @@ async function sendVerificationEmail(email, code) {
       .replace(/=+$/, "");
 
     // send using Gmail API
-    console.log("seind ..........");
+    console.log("send ..........");
     const res = await gmail.users.messages.send({
       userId: "me",
       requestBody: {
@@ -67,12 +67,11 @@ async function sendVerificationEmail(email, code) {
       },
     });
 
-    console.log("✅ Email sent successfully:", res.data.id);
+    console.log("Email sent successfully:", res.data.id);
   } catch (err) {
-    console.error("❌ Gmail API error:", err);
+    console.error("Gmail API error:", err);
   }
 }
-sendVerificationEmail("anasrabhi0@gmail.com", 5454);
 // console.log("Open this URL in your browser:", authUrl);
 
 // const rl = readline.createInterface({
@@ -87,8 +86,8 @@ sendVerificationEmail("anasrabhi0@gmail.com", 5454);
 
 // to wait between retries
 //aside for now (render smtp ports are sealed)
-// async function sendVerificationEmail(
-//   email,
+// async function sendEmail(
+//   email,type,
 //   code,
 //   maxRetries = Infinity,
 //   delayMs = 2000
@@ -203,9 +202,16 @@ router.post("/resend", AuthLimiter, async (req, res) => {
       });
     }
     const user = emailRows[0];
+    if (user.verified) {
+      return res.json({
+        ok: 0,
+        message: "User Already Verified",
+        status: "400",
+      });
+    }
     last_verify_date = new Date(user.code_date).getTime();
     rightNow = new Date().getTime();
-    timeDiffInMinutes = (rightNow - last_verify_date) / 1000000;
+    timeDiffInMinutes = (rightNow - last_verify_date) / 60000;
 
     if (timeDiffInMinutes < 5) {
       //already sent earlier
@@ -217,9 +223,9 @@ router.post("/resend", AuthLimiter, async (req, res) => {
     } else {
       //send again
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      await sendVerificationEmail(email, code);
+      await sendEmail(email, code, "Verification");
       await db.query(`UPDATE users SET code_date=$1,code=$3 WHERE email=$2`, [
-        new Date().toISOString(),
+        formatLocalDate(),
         email,
         code,
       ]);
@@ -306,10 +312,85 @@ router.post("/verify", AuthLimiter, async (req, res) => {
   }
 });
 
+router.post("/reset", AuthLimiter, async (req, res) => {
+  try {
+    const { email, password, code } = req.body;
+
+    if (!checker([email, code, password]))
+      return res.json({
+        status: 400,
+        ok: 0,
+        message: "Input Error",
+      });
+
+    const result = await db.query("SELECT * FROM users WHERE email=$1", [
+      email,
+    ]);
+    const rows = result.rows;
+    if (!rows.length)
+      return res.json({
+        status: 300,
+        ok: 0,
+        message: "Email Not Registered , Please Proceed to Register",
+      });
+    const user = rows[0];
+    if (!user.verified) {
+      return res.json({
+        status: 400,
+        ok: 0,
+        message: "Account Needs verification",
+      });
+    }
+    last_forgot_date = new Date(user.forgot_date).getTime();
+    rightNow = new Date().getTime();
+    timeDiffInMinutes = (rightNow - last_forgot_date) / 60000;
+
+    if (timeDiffInMinutes > 10) {
+      //already sent earlier
+      return res.json({
+        status: 200,
+        ok: 0,
+        message: "Recovery Code Expired ,Please Request Recovery again",
+      });
+    } else {
+      console.log(user.code);
+      if (user.code != code) {
+        return res.json({
+          status: 400,
+          ok: 0,
+          message: "Wrong Code",
+        });
+      }
+      //still valid
+      //hash new pass
+
+      const hashed = await bcrypt.hash(password, 10);
+      //remove code after user (security)
+      await db.query(`UPDATE users SET password=$1,code='' WHERE email=$2`, [
+        hashed,
+        email,
+      ]);
+      return res.json({
+        status: 200,
+        ok: 1,
+        message: "Your Password has been changed successfully,please login",
+      });
+    }
+  } catch (e) {
+    console.log(e.message + " -> " + e.stack);
+
+    return res.json({
+      ok: 0,
+      message: "Internal Error",
+      status: "500",
+    });
+  }
+});
+
 router.post("/forgot", AuthLimiter, async (req, res) => {
   try {
     const { email } = req.body;
-
+    console.log(email);
     if (!checker([email]))
       return res.json({
         status: 400,
@@ -328,11 +409,34 @@ router.post("/forgot", AuthLimiter, async (req, res) => {
         message: "Email Not Registered , Please Proceed to Register",
       });
     const user = rows[0];
+    if (!user.verified) {
+      //needs verif first to access this
+      return res.json({
+        status: 400,
+        ok: 0,
+        message: "This account needs verification first",
+      });
+    }
 
-    last_forgot_date = new Date(user.forgot_date).getTime();
+    last_forgot_date = new Date(user.code_date).getTime();
     rightNow = new Date().getTime();
-    timeDiffInMinutes = (rightNow - last_forgot_date) / 1000000;
-
+    timeDiffInMinutes = (rightNow - last_forgot_date) / 60000;
+    console.log(user.code_date);
+    console.log(
+      new Date().getMinutes() +
+        " " +
+        new Date().getSeconds() +
+        " " +
+        new Date().getHours()
+    );
+    console.log(
+      new Date(user.code_date).getMinutes() +
+        " " +
+        new Date(user.code_date).getSeconds() +
+        " " +
+        new Date(user.code_date).getHours()
+    );
+    console.log(timeDiffInMinutes);
     if (timeDiffInMinutes < 5) {
       //already sent earlier
       return res.json({
@@ -345,16 +449,16 @@ router.post("/forgot", AuthLimiter, async (req, res) => {
 
       const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-      await sendVerificationEmail(email, code);
+      await sendEmail(email, code, "Recovery");
       await db.query(`UPDATE users SET code_date=$1,code=$3 WHERE email=$2`, [
-        new Date().toISOString(),
+        formatLocalDate(),
         email,
         code,
       ]);
       return res.json({
         status: 200,
         ok: 1,
-        message: "An Recovery email is just sent , check your",
+        message: "A Recovery email is just sent , check your email",
       });
     }
   } catch (e) {
@@ -440,16 +544,16 @@ router.post("/sign-up", AuthLimiter, async (req, res) => {
     const initialreset = new Date();
     const insertionResult = await db.query(
       `INSERT INTO users (username,email,password,last_reset) VALUES ($1,$2,$3,$4)`,
-      [username, email, hashedPassword, initialreset.toISOString()]
+      [username, email, hashedPassword, formatLocalDate()]
     );
     console.log(req.body);
     if (insertionResult.rowCount > 0) {
       console.log("done");
 
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      await sendVerificationEmail(email, code);
+      await sendEmail(email, code, "Verification");
       await db.query(`UPDATE users SET code_date=$1,code=$3 WHERE email=$2`, [
-        new Date().toISOString(),
+        formatLocalDate(),
         email,
         code,
       ]);
@@ -517,7 +621,7 @@ router.post("/sign-in", AuthLimiter, async (req, res) => {
 
   last_verification_date = new Date(user.code_date).getTime();
   rightNow = new Date().getTime();
-  timeDiffInMinutes = (rightNow - last_verification_date) / 1000000;
+  timeDiffInMinutes = (rightNow - last_verification_date) / 60000;
   console.log("user**************************************");
   console.log(user);
   if (!user.verified) {
@@ -530,9 +634,9 @@ router.post("/sign-in", AuthLimiter, async (req, res) => {
       });
     } else {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      await sendVerificationEmail(email, code);
+      await sendEmail(email, code, "Verification");
       await db.query(`UPDATE users SET code_date=$1,code=$3 WHERE email=$2`, [
-        new Date().toISOString(),
+        formatLocalDate(),
         email,
         code,
       ]);
