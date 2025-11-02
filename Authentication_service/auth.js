@@ -610,15 +610,6 @@ router.post("/sign-in", AuthLimiter, async (req, res) => {
     });
   const user = rows[0];
 
-  const check = await bcrypt.compare(password, user.password);
-
-  if (!check)
-    return res.json({
-      status: 400,
-      ok: 0,
-      message: "Wrong Password",
-    });
-
   last_verification_date = new Date(user.code_date).getTime();
   rightNow = new Date().getTime();
   timeDiffInMinutes = (rightNow - last_verification_date) / 60000;
@@ -647,6 +638,14 @@ router.post("/sign-in", AuthLimiter, async (req, res) => {
       });
     }
   }
+  const check = await bcrypt.compare(password, user.password);
+
+  if (!check)
+    return res.json({
+      status: 400,
+      ok: 0,
+      message: "Wrong Password",
+    });
 
   const token = jwt.sign(
     {
